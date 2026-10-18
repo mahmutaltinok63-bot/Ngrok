@@ -15,22 +15,32 @@ jobs:
     steps:
       - name: Install Ngrok
         run: |
-          # Ngrok'u resmi sitesinden indirip sistem yoluna ekleyelim
           curl -sSL https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-linux-amd64.tgz -o ngrok.tgz
           sudo tar -xzf ngrok.tgz -C /usr/local/bin
 
       - name: Authenticate Ngrok
         run: |
-          # Secrets içine kaydettiğin token ile ngrok hesabını bağla
           ngrok config add-authtoken ${{ secrets.NGROK_AUTH_TOKEN }}
 
       - name: Start test server (İsteğe bağlı örnek sunucu)
         run: |
-          # Test için basit bir sunucu başlatıyoruz (kendi projen varsa bunu silebilirsin)
           echo "<h1>GitHub Actions Ngrok Tunnel Aktif!</h1>" > index.html
           python3 -m http.server ${{ github.event.inputs.port }} &
 
       - name: Start Ngrok Tunnel
         run: |
-          # Ngrok tünelini başlatır ve bağlantının açık kalmasını sağlar
-          ngrok http ${{ github.event.inputs.port }}
+          # Ngrok'u arka planda logları tutarak başlatıyoruz (kilitlenmeyi önler)
+          nohup ngrok http ${{ github.event.inputs.port }} --log=stdout > ngrok.log 2>&1 &
+          
+          # Tünelin ayağa kalkması için 4 saniye bekliyoruz
+          sleep 4
+          
+          echo "=== NGROK URL ADRESİNİZ ==="
+          # Doğrudan yerel API'den tünel adresini çekip ekrana yazdırıyoruz
+          curl -s http://127.0.0.1:4040/api/tunnels
+          
+          echo -e "\n============================"
+          echo "Tünel açık kalıyor..."
+          
+          # Runner'ın kapanmaması için süreci açık tutuyoruz (6 saat)
+          sleep 21600
