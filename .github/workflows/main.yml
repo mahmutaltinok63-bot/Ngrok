@@ -1,0 +1,36 @@
+name: Ngrok Tunnel
+
+on:
+  workflow_dispatch:
+    inputs:
+      port:
+        description: 'Tünellenecek Port (Örn: 80, 3000, 8080)'
+        required: true
+        default: '80'
+
+jobs:
+  ngrok-tunnel:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360 # Actions'ın maksimum açık kalma süresi (örn. 6 saat)
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Start test server (İsteğe bağlı örnek sunucu)
+        run: |
+          # Eğer test etmek için çalışan bir servisiniz yoksa basit bir HTML sayfası oluşturur
+          echo "<h1>GitHub Actions Ngrok Tunnel Aktif!</h1>" > index.html
+          python3 -m http.server ${{ github.event.inputs.port }} &
+
+      - name: Start Ngrok Tunnel
+        uses: ngrok/ngrok-action@v1
+        with:
+          command: http ${{ github.event.inputs.port }}
+          auth-token: ${{ secrets.NGROK_AUTH_TOKEN }}
+
+      - name: Keep runner alive
+        run: |
+          echo "Tünel başarıyla oluşturuldu!"
+          echo "Ngrok panelinden veya Actions loglarındaki URL'yi kopyalayıp Firefox'ta açabilirsiniz."
+          # Runner'ın kapanmaması için bekletme (süre dolana kadar açık kalır)
+          sleep 21600
